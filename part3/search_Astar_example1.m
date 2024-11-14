@@ -18,10 +18,15 @@ graph = {
 % Define Start and Goal nodes
 startNode = 'S';
 goalNodes = {'G1', 'G2', 'G3'}; % Cell array of one or more goal(s)
+heuristicTable = containers.Map({'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G1', 'G2', 'G3'}, ...
+[5, 7, 3, 4, 6, 5, 6, 0, 0, 0]);
 
 % Call the function
-[path, cost, stepTable] = search_with_table(graph, startNode, goalNodes);
+[path, cost, stepTable] = search_with_table(graph, startNode, goalNodes,heuristicTable);
 
+
+
+                                    
 % Display the result
 disp('Step-by-Step Table:');
 disp(stepTable);
@@ -32,7 +37,7 @@ disp(cost);
 
 % ========================================
 
-function [path, cost, stepTable] = search_with_table(graph, startNode, goalNodes)
+function [path, cost, stepTable] = search_with_table(graph, startNode, goalNodes,heuristicTable)
 
 % Get the nodes
 nodes = graph(:,1);
@@ -123,7 +128,8 @@ while true
         for j = 1:length(nodes)
             if strcmp(nodes{j}, neighbor)
                 newGCost = currentGCost + edgeCost;
-                newFCost = newGCost;  % f = g "Uniform" search
+                newHCost = heuristicTable(neighbor); % Get the heuristic value from the table
+                newFCost = newGCost+newHCost;  % f = g "Uniform" search
                 if newGCost < costs(j)  % If the new g-cost is cheaper
                     parent{j} = current;  % Update parent
                     costs(j) = newGCost;   % Update g-cost
