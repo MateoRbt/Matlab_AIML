@@ -18,15 +18,10 @@ graph = {
 % Define Start and Goal nodes
 startNode = 'S';
 goalNodes = {'G1', 'G2', 'G3'}; % Cell array of one or more goal(s)
-heuristicTable = containers.Map({'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G1', 'G2', 'G3'}, ...
-[5, 7, 3, 4, 6, 5, 6, 0, 0, 0]);
 
 % Call the function
-[path, cost, stepTable] = search_with_table(graph, startNode, goalNodes,heuristicTable);
+[path, cost, stepTable] = search_with_table(graph, startNode, goalNodes);
 
-
-
-                                    
 % Display the result
 disp('Step-by-Step Table:');
 disp(stepTable);
@@ -37,13 +32,13 @@ disp(cost);
 
 % ========================================
 
-function [path, cost, stepTable] = search_with_table(graph, startNode, goalNodes,heuristicTable)
+function [path, cost, stepTable] = search_with_table(graph, startNode, goalNodes)
 
 % Get the nodes
 nodes = graph(:,1);
 
-% Initialize priority queue (node, g-cost, f-cost), visited array, parent array, and costs
-queue = {startNode, 0, 0, 'None'};  % Priority queue: node, g-cost, f-cost, parent
+% Initialize stack (node, g-cost, f-cost, parent), visited array, parent array, and costs
+stack = {startNode, 0, 0, 'None'};  % Stack: node, g-cost, f-cost, parent
 costs = Inf(1, length(nodes));  % Costs to reach each node (initialize to infinity)
 costs(strcmp(nodes, startNode)) = 0;  % Cost to reach the start node is zero
 parent = cell(1, length(nodes));  % Parent array to reconstruct path
@@ -54,24 +49,24 @@ stepTable = table([], {}, {}, 'VariableNames', ...
     {'Step', 'Frontier', 'SelectedNode'});
 
 stepCount = 0; % Step counter for the table
-GoalFound=false;
+GoalFound = false;
 
 % Main loop
 while true
     % VISUAL - Before removing the selected node, capture the state of the frontier
     frontierStr = "";
-    for k = 1:size(queue, 1)
+    for k = 1:size(stack, 1)
         % Display f value and parent for each node in the frontier
-        if k>1
-            frontierStr = frontierStr  + ", ";
+        if k > 1
+            frontierStr = frontierStr + ", ";
         end
-        frontierStr = frontierStr + queue{k, 1} + "(" + num2str(queue{k, 3}) + "," + queue{k, 4} + ")";
+        frontierStr = frontierStr + stack{k, 1} + "(" + num2str(stack{k, 3}) + "," + stack{k, 4} + ")";
     end
 
     % Check if the current node is one of the goals
     if GoalFound
         % Calculate the final cost
-        current=GoalFoundNode;
+        current = GoalFoundNode;
         currentIndex = strcmp(nodes, current);
         cost = costs(currentIndex);
         % Reconstruct the path
@@ -86,22 +81,22 @@ while true
             end
         end
         return;
-    elseif isempty(queue)
-        path={'NOT FOUND'};
-        cost=0;
+    elseif isempty(stack)
+        path = {'NOT FOUND'};
+        cost = 0;
         return;
     else
-        % Get the node with the lowest f-cost
-        [~,minFCostidx]=min(cat(1,queue{:,3}));
-        current = queue{minFCostidx, 1}; % Get the node with the lowest f-cost
-        currentGCost = queue{minFCostidx, 2}; % Get the corresponding g-cost
-        currentFCost = queue{minFCostidx, 3}; % Get the corresponding f-cost
-        currentParent = queue{minFCostidx, 4}; % Get the parent of the current node
-        queue(minFCostidx, :) = [];  % Dequeue the current node        
+        % Get the node from the top of the stack
+        current = stack{end, 1}; % Get the node from the top of the stack
+        currentGCost = stack{end, 2}; % Get the corresponding g-cost
+        currentFCost = stack{end, 3}; % Get the corresponding f-cost
+        currentParent = stack{end, 4}; % Get the parent of the current node
+        stack(end, :) = [];  % Pop the current node from the stack
     end
+
     if ismember(current, goalNodes)
-        GoalFound=true;
-        GoalFoundNode=current;
+        GoalFound = true;
+        GoalFoundNode = current;
     end
 
     % Mark the current node as visited
@@ -121,31 +116,18 @@ while true
     end
   
     % Explore neighbors
-    for i = 1:size(neighbors, 1)
+    for i = size(neighbors, 1):-1:1
         neighbor = neighbors{i, 1};
         edgeCost = neighbors{i, 2};
         % Check if neighbor has not been visited or if a cheaper path is found
         for j = 1:length(nodes)
             if strcmp(nodes{j}, neighbor)
                 newGCost = currentGCost + edgeCost;
-                newHCost = heuristicTable(neighbor); % Get the heuristic value from the table
-                newFCost = newHCost;  % f = g "Uniform" search
+                newFCost = 0;  % f = g "Uniform" search
                 if newGCost < costs(j)  % If the new g-cost is cheaper
                     parent{j} = current;  % Update parent
                     costs(j) = newGCost;   % Update g-cost
-                    if ~ismember(neighbor, queue(:, 1))
-                        queue(end + 1, :) = {neighbor, newGCost, newFCost, current};  % Enqueue the neighbor with the new g and f costs and parent
-                    else
-                        % Update the g and f cost in the queue if this path is cheaper
-                        for k = 1:size(queue, 1)
-                            if strcmp(queue{k, 1}, neighbor) && queue{k, 2} > newGCost
-                                queue{k, 2} = newGCost;
-                                queue{k, 3} = newFCost;
-                                queue{k, 4} = current; % Update the parent in the queue
-                                break;
-                            end
-                        end
-                    end
+                        stack= [stack; {neighbor, newGCost, newFCost, current}];  % Push the neighbor onto the stack     
                 end
                 break;
             end
@@ -158,4 +140,3 @@ while true
 end
 
 end
-
